@@ -49,26 +49,28 @@ files_to_search.extend(Path('./src').rglob('./*.md'))
 def replace_everywhere(to_find, to_replace):
     for path in files_to_search:
         replace(path, to_find, to_replace)
-        replace(path, to_find.capitalize(), to_camel_case(to_replace))
+        # replace(path, to_find.capitalize(), to_camel_case(to_replace))
     
-    replace("./CMakeLists.txt", to_find, to_replace)
-    replace("./Makefile", to_find, to_replace)
-    replace("./Makefile", to_find.capitalize(), to_camel_case(to_replace))
-    replace("./Makefile", to_find.upper(), to_replace.upper())
-    replace("./README.md", to_find, to_replace)
+    # replace("./CMakeLists.txt", to_find, to_replace)
+    # replace("./Makefile", to_find, to_replace)
+    # replace("./Makefile", to_find.capitalize(), to_camel_case(to_replace))
+    # replace("./Makefile", to_find.upper(), to_replace.upper())
+    # replace("./README.md", to_find, to_replace)
 
-replace_everywhere("quack", name_extension)
-replace_everywhere("<extension_name>", name_extension)
+# replace_everywhere("quack", name_extension)
+# replace_everywhere("<extension_name>", name_extension)
 
-string_to_replace = name_extension
-string_to_find = "quack"
+replace_everywhere("Oml", "OML")
+
+# string_to_replace = name_extension
+# string_to_find = "quack"
 
 # rename files
-os.rename(f'test/python/{string_to_find}_test.py', f'test/python/{string_to_replace}_test.py')
-os.rename(f'test/sql/{string_to_find}.test', f'test/sql/{string_to_replace}.test')
-os.rename(f'src/{string_to_find}_extension.cpp', f'src/{string_to_replace}_extension.cpp')
-os.rename(f'src/include/{string_to_find}_extension.hpp', f'src/include/{string_to_replace}_extension.hpp')
-os.rename(f'test/nodejs/{string_to_find}_test.js', f'test/nodejs/{string_to_replace}_test.js')
+# os.rename(f'test/python/{string_to_find}_test.py', f'test/python/{string_to_replace}_test.py')
+# os.rename(f'test/sql/{string_to_find}.test', f'test/sql/{string_to_replace}.test')
+# os.rename(f'src/{string_to_find}_extension.cpp', f'src/{string_to_replace}_extension.cpp')
+# os.rename(f'src/include/{string_to_find}_extension.hpp', f'src/include/{string_to_replace}_extension.hpp')
+# os.rename(f'test/nodejs/{string_to_find}_test.js', f'test/nodejs/{string_to_replace}_test.js')
 
-# remove template-specific files
-os.remove('.github/workflows/ExtensionTemplate.yml')
+# # remove template-specific files
+# os.remove('.github/workflows/ExtensionTemplate.yml')
