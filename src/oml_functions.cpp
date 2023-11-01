@@ -59,19 +59,19 @@ inline void OMLFunctions::OMLScanImplementation(ClientContext &context, TableFun
 
 	do{
 		std::vector<duckdb::Value> duck_row = global_data.reader_bind.ReadRow(global_data.rows_read);
+		if (duck_row.empty()){break;}
+
+		for (long unsigned int i = 0; i < duck_row.size(); i++) {
+			auto v = duck_row.at(i);
+			output.SetValue(i, output.size(), v);
+			auto a = output.size();
+		}
 
 		global_data.rows_read++;
 		rows_read_local++;
 	} while(rows_read_local <= STANDARD_VECTOR_SIZE);
 
-	std::vector<duckdb::Value> duck_row = {true};
-	for (long unsigned int i = 0; i < duck_row.size(); i++) {
-		auto v = duck_row.at(i);
-		output.SetValue(i, output.size(), v);
-		auto a = output.size();
-	}
-
-	output.SetCardinality(output.size() + 1);
+	output.SetCardinality(output.size()); // remember to test this
 	global_data.chunk_count += 1;
 }
 
