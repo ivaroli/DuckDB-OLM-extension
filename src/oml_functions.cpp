@@ -1,11 +1,7 @@
 #include "oml_functions.hpp"
 #include "oml_reader.hpp"
 
-#include "duckdb/execution/expression_executor.hpp"
-#include "duckdb/function/cast/cast_function_set.hpp"
-#include "duckdb/function/cast/default_casts.hpp"
-#include "duckdb/parser/expression/function_expression.hpp"
-#include "duckdb/common/multi_file_reader.hpp"
+#include "duckdb.hpp"
 
 namespace duckdb {
 
@@ -14,7 +10,6 @@ public:
 	idx_t chunk_count;
 	idx_t rows_read;
 	vector<LogicalType> types;
-	OMLReader reader_bind;
 };
 
 struct OMLReadLocalState : public LocalTableFunctionState {
@@ -24,8 +19,7 @@ struct OMLReadLocalState : public LocalTableFunctionState {
 struct OMLReadBindState : public TableFunctionData {
 public:
 	std::string file;
-	vector<LogicalType> return_types;
-	vector<std::string> names;
+	shared_ptr<OMLReader> reader_bind;
 };
 
 /////////////////////////////
@@ -53,25 +47,31 @@ TableFunction OMLFunctions::GetOMLScanFunction() {
 inline void OMLFunctions::OMLScanImplementation(ClientContext &context, TableFunctionInput &data_p, DataChunk &output){
 	// this is the last call
 	auto &global_data = data_p.global_state->Cast<OMLReadGlobalState>();
-	auto &local_data = data_p.local_state->Cast<OMLReadGlobalState>();
+	auto &local_data = data_p.local_state->Cast<OMLReadLocalState>();
 	auto &bind_data = data_p.bind_data->Cast<OMLReadBindState>();
 	idx_t rows_read_local = 0;
 
-	do{
-		std::vector<duckdb::Value> duck_row = global_data.reader_bind.ReadRow(global_data.rows_read);
+	std::vector<duckdb::Value> duck_row{};
+
+	while(rows_read_local < STANDARD_VECTOR_SIZE && bind_data.reader_bind->ReadRow(global_data.rows_read, duck_row)){
 		if (duck_row.empty()){break;}
 
 		for (long unsigned int i = 0; i < duck_row.size(); i++) {
 			auto v = duck_row.at(i);
-			output.SetValue(i, output.size(), v);
-			auto a = output.size();
+			output.SetValue(i, rows_read_local, v);
 		}
 
 		global_data.rows_read++;
 		rows_read_local++;
-	} while(rows_read_local <= STANDARD_VECTOR_SIZE);
+		duck_row = std::vector<duckdb::Value>();
+	}
 
-	output.SetCardinality(output.size()); // remember to test this
+	if (rows_read_local == 0)
+	{
+		return;
+	}
+	
+	output.SetCardinality(rows_read_local); // remember to test this
 	global_data.chunk_count += 1;
 }
 
@@ -81,7 +81,8 @@ unique_ptr<GlobalTableFunctionState> OMLFunctions::OMLScanInitGlobal(ClientConte
 	auto bind_data = input.bind_data->Cast<OMLReadBindState>();
 
 	// create a reader
-	result->reader_bind = OMLReader(bind_data.return_types, bind_data.names, bind_data.file);
+	//result->reader_bind = OMLReader(bind_data.return_types, bind_data.names, bind_data.file);
+	result->rows_read = 0;
 	
 	return std::move(result);
 }
@@ -94,34 +95,11 @@ unique_ptr<LocalTableFunctionState> OMLFunctions::OMLScanInitLocal(ExecutionCont
 
 unique_ptr<FunctionData> OMLFunctions::OMLScanBind(ClientContext &context, TableFunctionBindInput &input, vector<LogicalType> &return_types, vector<string> &names){
 	// this is called first - binding the scan to the OML scan function
-	
-	// hard coding the column names and types as they will always stay the same
-	names.push_back("test");
-	// names.push_back("experiment_id");
-	// names.push_back("node_id");
-	// names.push_back("node_id_seq");
-	// names.push_back("time_sec");
-	// names.push_back("time_usec");
-	// names.push_back("power");
-	// names.push_back("current");
-	// names.push_back("voltage");
-
-	return_types.push_back(LogicalType::BOOLEAN);
-	// return_types.push_back(LogicalType::VARCHAR);
-	// return_types.push_back(LogicalType::VARCHAR);
-	// return_types.push_back(LogicalType::VARCHAR);
-	// return_types.push_back(LogicalType::VARCHAR);
-	// return_types.push_back(LogicalType::VARCHAR);
-	// return_types.push_back(LogicalType::DOUBLE);
-	// return_types.push_back(LogicalType::DOUBLE);
-	// return_types.push_back(LogicalType::DOUBLE);
-
 	auto file = input.inputs[0];
 	auto result = make_uniq<OMLReadBindState>();
-	
+
+	result->reader_bind = make_shared<OMLReader>(&return_types, &names, file);
 	result->file = file.ToString();
-	result->names = names;
-	result->return_types = return_types;
 
 	return std::move(result);
 }
