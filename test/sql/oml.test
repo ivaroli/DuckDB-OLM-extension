@@ -18,6 +18,11 @@ SELECT oml('Sam');
 OML Sam 🐥
 
 query I
-SELECT oml_openssl_version('Michael');
+SELECT COUNT(*) FROM OmlGen('./data/test_1.oml');
 ----
-<REGEX>:OML Michael, my linked OpenSSL version is OpenSSL.*
+67725
+
+query I
+SELECT COUNT(*) FROM OmlGen('./data/test_2.oml');
+----
+67725

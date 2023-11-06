@@ -10,16 +10,20 @@ namespace duckdb {
 OMLReader::OMLReader(){}
 
 OMLReader::OMLReader(std::vector<LogicalType> *return_types, std::vector<std::string> *names, duckdb::Value file):
-file(file.ToString()), names(names), return_types(return_types){
+file(file.ToString()), names(names), return_types(return_types){	
 	std::ifstream infile(this->file);
 	this->lines = std::vector<std::string>();
+
+	// file doesn't exist
+	if(!infile.good()){
+		throw InvalidInputException("File " + this->file + " does not exist.");
+	}
 
 	for (std::string line; std::getline(infile, line); ) {
 		this->lines.push_back(line);
 	}
 
 	this->ProcessMetadata(this->return_types, this->names);
-	this->data_start = 9; // TODO: Fix
 }
 
 bool OMLReader::ReadRow(idx_t index, std::vector<Value> &row){
@@ -44,13 +48,16 @@ bool OMLReader::ReadRow(idx_t index, std::vector<Value> &row){
 
 void OMLReader::ProcessMetadata(std::vector<duckdb::LogicalType>* return_types, std::vector<std::string>* names){
 	int maxSchemaNumber = -1, row = 0;
+	bool found_data = false;
 
-	while(true){
+	while(row < this->lines.size()){
 		auto current_row = std::istringstream(this->lines.at(row));
 		auto words = this->SplitLine(current_row, ' ');
 
-		if (maxSchemaNumber >= 0 && (words.empty() || words.at(0) != "schema:")){
-			//this->data_start = row;
+		if (maxSchemaNumber >= 0 && words.at(0) != "schema:" 
+			&& this->SplitLine(current_row, '\t').size() == return_types->size()){
+			this->data_start = row;
+			found_data = true;
 			break;
 		} else if (words.at(0) == "schema:"){
 			maxSchemaNumber++;
@@ -62,6 +69,10 @@ void OMLReader::ProcessMetadata(std::vector<duckdb::LogicalType>* return_types, 
 			}
 		}
 		row++;
+	}
+
+	if(!found_data){
+		throw InvalidInputException("Incorrect file format");
 	}
 }
 
@@ -95,6 +106,10 @@ std::vector<std::string> OMLReader::SplitLine(std::istream& str, char delim){
     {
         result.push_back("");
     }
+
+	str.clear();
+	str.seekg(0);
+
     return result;
 }
 

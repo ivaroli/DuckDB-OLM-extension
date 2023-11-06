@@ -35,7 +35,7 @@ vector<TableFunction> OMLFunctions::GetTableFunctions() {
 }
 
 TableFunction OMLFunctions::GetOMLScanFunction() {
-	TableFunction table_function("oml_read", {LogicalType::VARCHAR}, OMLScanImplementation, OMLScanBind, OMLScanInitGlobal, OMLScanInitLocal);
+	TableFunction table_function("OmlGen", {LogicalType::VARCHAR}, OMLScanImplementation, OMLScanBind, OMLScanInitGlobal, OMLScanInitLocal);
 
 	return table_function;
 }
